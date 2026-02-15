@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ITSTUDIO | IT研学会 & 电竞中心</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Space Grotesk','sans-serif'], mono: ['JetBrains Mono','monospace'] },
+                    colors: { dark:'#0B0C10', light:'#F3F4F6', teal:'#14b8a6', tealDark:'#66FCF1', tealDim:'#45A29E' }
+                }
+            }
+        }
+    </script>
+    <style>
+        #geo-canvas{position:fixed;top:0;left:0;width:100vw;height:100vh;display:block;z-index:0;pointer-events:none}
+        :root{--bg-color:#F3F4F6;--text-main:#111827;--glass-bg:rgba(255,255,255,0.65);--glass-border:rgba(0,0,0,0.05);--glass-shadow:rgba(0,0,0,0.05);--input-bg:rgba(255,255,255,0.8);--input-text:#1F2937}
+        html.dark{--bg-color:#0B0C10;--text-main:#C5C6C7;--glass-bg:rgba(11,12,16,0.75);--glass-border:rgba(255,255,255,0.08);--glass-shadow:rgba(0,0,0,0.1);--input-bg:rgba(11,12,16,0.8);--input-text:#ffffff}
+        body{background-color:var(--bg-color);color:var(--text-main);overflow-x:hidden;transition:background-color .3s ease,color .3s ease;margin:0;padding:0;font-family:'Space Grotesk',sans-serif;position:relative}
+        ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--bg-color)}::-webkit-scrollbar-thumb{background:#4B5563;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#14b8a6}
+        .no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+        .glass{background:var(--glass-bg);backdrop-filter:blur(16px);border:1px solid var(--glass-border);box-shadow:0 4px 30px var(--glass-shadow);transition:background .3s ease,border-color .3s ease}
+        .bento-card{transition:all .3s ease;position:relative;overflow:hidden}
+        .bento-card:hover{transform:translateY(-5px);border-color:rgba(20,184,166,.5)}
+        html.dark .bento-card:hover{border-color:rgba(102,252,241,.3);box-shadow:0 10px 30px -10px rgba(102,252,241,.15)}
+        .marquee-container{overflow:hidden;position:relative;width:100%;mask-image:linear-gradient(to right,transparent,black 10%,black 90%,transparent);-webkit-mask-image:linear-gradient(to right,transparent,black 10%,black 90%,transparent)}
+        .marquee-track{display:flex;width:max-content;animation:marquee 40s linear infinite}
+        .marquee-content{flex-shrink:0;display:flex;align-items:center;gap:4rem;padding-right:4rem}
+        .marquee-container:hover .marquee-track{animation-play-state:paused}
+        .member-track{animation-duration:55s !important}
+        .member-card{width:290px;flex-shrink:0}
+        @keyframes marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+        .chat-fade-enter{opacity:0;transform:translateY(10px);animation:fadeIn .4s forwards}
+        @keyframes fadeIn{to{opacity:1;transform:translateY(0)}}
+        .view-transition{transition:opacity .5s ease,transform .5s ease,filter .5s ease}
+        .view-hidden{opacity:0;pointer-events:none;position:absolute;top:0;left:0;width:100%;height:0;overflow:hidden;transform:scale(.95);filter:blur(10px);z-index:-10}
+        .view-visible{opacity:1;pointer-events:auto;position:relative;transform:scale(1);filter:blur(0);z-index:10}
+        .theme-toggle{position:relative;width:52px;height:28px;border-radius:100px;background-color:#E5E7EB;cursor:pointer;transition:all .3s ease;box-shadow:inset 0 2px 4px rgba(0,0,0,.1)}
+        html.dark .theme-toggle{background-color:#1F2833;border:1px solid rgba(255,255,255,.1)}
+        .toggle-thumb{position:absolute;top:2px;left:2px;width:24px;height:24px;border-radius:50%;background-color:white;transition:all .3s cubic-bezier(.4,0,.2,1);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,.2)}
+        html.dark .toggle-thumb{transform:translateX(24px);background-color:#66FCF1}
+        .interaction-btn{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .3s ease;background:rgba(0,0,0,.05)}
+        html.dark .interaction-btn{background:rgba(255,255,255,.1)}
+        .interaction-btn:hover{background:rgba(20,184,166,.2);color:#14b8a6}
+        html.dark .interaction-btn:hover{color:#66FCF1}
+        .game-tab.active-tab{background-color:#14b8a6;color:white;box-shadow:0 4px 20px -5px rgba(20,184,166,.4)}
+        html.dark .game-tab.active-tab{background-color:#66FCF1;color:black}
+        .modal-animate-in{animation:modalIn .3s forwards}
+        .modal-animate-out{animation:modalOut .3s forwards}
+        @keyframes modalIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+        @keyframes modalOut{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(.95)}}
+    </style>
+</head>
+<body class="relative min-h-screen transition-colors duration-300">
+<canvas id="geo-canvas"></canvas>
+
+<!-- 导航栏 -->
+<nav class="fixed top-0 w-full z-50 glass border-b border-gray-200 dark:border-white/5 transition-colors duration-300">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
+        <div onclick="switchView('home')" class="font-bold text-xl tracking-tighter text-gray-900 dark:text-white flex items-center gap-2 cursor-pointer hover:opacity-80 transition">
+            <i class="bi bi-box-seam text-teal dark:text-tealDark"></i> ITSTUDIO
+        </div>
+        <div class="flex items-center gap-4 md:gap-6">
+            <div class="hidden md:flex gap-6 text-sm font-medium text-gray-600 dark:text-gray-300 items-center">
+                <a href="#about" class="hover:text-teal dark:hover:text-tealDark transition">关于我们</a>
+                <a href="#members" class="hover:text-teal dark:hover:text-tealDark transition">历届成员</a>
+                <a href="#stack" class="hover:text-teal dark:hover:text-tealDark transition">技术栈</a>
+                <button onclick="switchView('esports')" class="px-3 py-1 rounded-lg hover:bg-teal/10 dark:hover:bg-white/10 hover:text-teal dark:hover:text-tealDark transition flex items-center gap-1">
+                    <i class="bi bi-trophy"></i> 电竞排行
+                </button>
+            </div>
+            <button class="interaction-btn" onclick="toggleInteraction()" title="切换交互模式">
+                <i id="interaction-icon" class="bi bi-magnet-fill"></i>
+            </button>
+            <div class="theme-toggle" onclick="toggleTheme()" title="切换主题">
+                <div class="toggle-thumb text-xs">
+                    <i class="bi bi-sun-fill text-yellow-500 dark:hidden"></i>
+                    <i class="bi bi-moon-fill text-black hidden dark:block"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- VIEW 1: 主页 -->
+<div id="home-view" class="view-transition view-visible w-full">
+    <section class="min-h-screen flex flex-col justify-center items-center px-4 relative z-10 max-w-5xl mx-auto pt-20">
+        <div class="text-center space-y-6">
+            <h1 class="text-7xl md:text-9xl font-bold text-gray-900 dark:text-white tracking-tight leading-none">
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-teal to-blue-600 dark:from-tealDark dark:to-blue-500">IT研学会</span>
+            </h1>
+            <p class="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+                移动鼠标以体验粒子网络。点击右上角 <i class="bi bi-magnet-fill text-teal dark:text-tealDark"></i> 按钮可切换引力/斥力场。
+            </p>
+        </div>
+    </section>
+
+    <!-- Bento Grid -->
+    <section id="about" class="py-24 px-6 max-w-7xl mx-auto relative z-20">
+        <div class="flex items-end justify-between mb-12">
+            <div>
+                <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">组织架构与数据</h2>
+                <p class="text-gray-500 dark:text-gray-400">社团运营数据可视化面板</p>
+            </div>
+            <div class="hidden md:block text-right font-mono text-xs text-teal dark:text-tealDim">数据同步：刚刚</div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-4 md:grid-rows-2 gap-4 h-auto md:h-[600px]">
+            <div class="md:col-span-2 md:row-span-2 glass rounded-3xl p-8 bento-card flex flex-col justify-between">
+                <div>
+                    <div class="w-12 h-12 bg-teal/10 rounded-xl flex items-center justify-center text-teal dark:text-tealDark mb-6"><i class="bi bi-terminal text-2xl"></i></div>
+                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">编码 · 创造 · 连接</h3>
+                    <p class="text-gray-600 dark:text-gray-400 leading-relaxed">我们不仅仅是一个社团，更是一个微型孵化器。在这里，你可以把天马行空的想法变成运行在服务器上的代码。</p>
+                </div>
+                <div class="relative h-40 mt-6 bg-gray-100 dark:bg-gray-900/50 rounded-xl overflow-hidden border border-gray-200 dark:border-white/5">
+                    <div class="p-3 font-mono text-xs text-teal dark:text-tealDark opacity-80">> git clone cs-club-v3<br>> npm install<br><span class="text-gray-800 dark:text-white">Ready on localhost:3000</span><span class="animate-pulse">_</span></div>
+                </div>
+            </div>
+            <div class="glass rounded-3xl p-6 bento-card flex flex-col justify-center items-center text-center">
+                <div class="text-5xl font-bold text-gray-900 dark:text-white mb-2">204<span class="text-teal dark:text-tealDark text-xl">+</span></div>
+                <div class="text-sm text-gray-500 dark:text-gray-400 font-mono">活跃核心成员</div>
+            </div>
+            <div class="glass rounded-3xl p-6 bento-card flex flex-col justify-center items-center text-center">
+                <i class="bi bi-github text-4xl mb-3 text-gray-900 dark:text-white"></i>
+                <div class="text-2xl font-bold text-gray-900 dark:text-white">1.2k</div>
+                <div class="text-xs text-gray-500 mt-1">开源仓库 STAR 数</div>
+            </div>
+            <div class="md:col-span-2 glass rounded-3xl p-6 bento-card flex items-center justify-between">
+                <div>
+                    <div class="text-xs text-teal dark:text-tealDark font-bold mb-1 tracking-wider">近期活动</div>
+                    <div id="activity-name" class="text-xl font-bold text-gray-900 dark:text-white">加载中...</div>
+                    <div id="activity-desc" class="text-xs text-gray-500 mt-1"></div>
+                </div>
+                <button onclick="openRegisterModal()" class="bg-teal dark:bg-tealDark text-white dark:text-black font-bold px-6 py-3 rounded-xl hover:opacity-90 transition">立即报名</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- 历届成员流动屏 -->
+    <section id="members" class="py-24 relative z-10 overflow-hidden bg-gray-200/30 dark:bg-black/10 border-y border-gray-200 dark:border-white/5">
+        <div class="max-w-7xl mx-auto px-6 mb-12">
+            <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">历届成员</h2>
+            <p class="text-gray-500 dark:text-gray-400">那些曾在这里留下足迹的开拓者们</p>
+        </div>
+        <div class="marquee-container">
+            <div class="marquee-track member-track">
+                <div class="marquee-content" id="member-content-1"></div>
+                <div class="marquee-content" id="member-content-2" aria-hidden="true"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 技术栈 -->
+    <section id="stack" class="py-20 bg-gray-200/50 dark:bg-black/20 border-y border-gray-200 dark:border-white/5 relative z-10">
+        <div class="text-center mb-10"><span class="text-xs font-mono text-gray-500 tracking-widest">基于现代技术栈构建</span></div>
+        <div class="marquee-container opacity-60 grayscale hover:grayscale-0 transition duration-500">
+            <div class="marquee-track">
+                <div class="marquee-content font-mono text-xl font-bold text-gray-400 dark:text-gray-300">
+                    <span>REACT</span><span>VUE</span><span>NEXT.JS</span><span>TYPESCRIPT</span><span>PYTHON</span><span>RUST</span><span>DOCKER</span><span>KUBERNETES</span><span>GO</span><span>TAILWIND</span><span>FLUTTER</span><span>THREE.JS</span>
+                </div>
+                <div class="marquee-content font-mono text-xl font-bold text-gray-400 dark:text-gray-300" aria-hidden="true">
+                    <span>REACT</span><span>VUE</span><span>NEXT.JS</span><span>TYPESCRIPT</span><span>PYTHON</span><span>RUST</span><span>DOCKER</span><span>KUBERNETES</span><span>GO</span><span>TAILWIND</span><span>FLUTTER</span><span>THREE.JS</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="relative z-10 border-t border-gray-200 dark:border-white/10 bg-white dark:bg-[#050508] pt-16 pb-32">
+        <div class="max-w-7xl mx-auto px-6 text-center text-gray-500">&copy; 2024 ITSTUDIO. 版权所有.</div>
+    </footer>
+</div>
+
+<!-- VIEW 2: AI 聊天 -->
+<div id="chat-view" class="view-transition view-hidden fixed inset-0 z-40 bg-gray-50/10 dark:bg-[#0B0C10]/10 backdrop-blur-sm flex flex-col pt-16">
+    <div class="h-12 border-b border-gray-200 dark:border-white/5 flex items-center justify-between px-6 bg-white/20 dark:bg-black/20">
+        <div class="flex items-center gap-3">
+            <div class="w-2 h-2 rounded-full bg-teal dark:bg-tealDark animate-pulse"></div>
+            <span class="font-mono text-sm text-teal dark:text-tealDark tracking-wider">AI 助手 V1.0</span>
+        </div>
+        <div class="text-xs text-gray-500 flex items-center gap-2">按 <kbd class="bg-gray-200 dark:bg-white/10 px-2 py-1 rounded font-mono">ESC</kbd> 返回</div>
+    </div>
+    <div id="scroll-container" class="flex-1 overflow-y-auto p-4 md:p-8 pb-32">
+        <div id="conversation-log" class="max-w-3xl mx-auto space-y-6"></div>
+    </div>
+</div>
+
+<!-- VIEW 3: 电竞看板 -->
+<div id="esports-view" class="view-transition view-hidden w-full pt-28 px-4 md:px-8 pb-40 min-h-screen">
+    <div class="max-w-7xl mx-auto">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+            <div>
+                <h2 class="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">E-SPORTS <span class="text-teal dark:text-tealDark">RANK</span></h2>
+                <p class="text-gray-500 dark:text-gray-400 font-mono text-sm">社团内部天梯 / 战绩追踪系统 <span class="ml-2 px-2 py-0.5 rounded bg-gray-200 dark:bg-white/10 text-xs font-bold">按 ESC 返回首页</span></p>
+            </div>
+            <button onclick="openUploadModal()" class="group flex items-center gap-2 bg-teal/10 hover:bg-teal dark:hover:bg-tealDark border border-teal/20 text-teal dark:text-tealDark hover:text-white dark:hover:text-black px-6 py-3 rounded-xl transition-all duration-300">
+                <i class="bi bi-cloud-upload group-hover:animate-bounce"></i><span class="font-bold">更新段位</span>
+            </button>
+        </div>
+        <div class="flex flex-wrap gap-3 mb-8" id="game-tabs">
+            <button onclick="switchGame('valorant')" class="game-tab active-tab px-5 py-2 rounded-lg text-sm font-bold transition-all border border-transparent" data-game="valorant"><i class="bi bi-crosshair"></i> 无畏契约</button>
+            <button onclick="switchGame('naraka')" class="game-tab px-5 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-teal dark:hover:text-tealDark transition-all border border-transparent" data-game="naraka"><i class="bi bi-shield-shaded"></i> 永劫无间</button>
+            <button onclick="switchGame('apex')" class="game-tab px-5 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-teal dark:hover:text-tealDark transition-all border border-transparent" data-game="apex"><i class="bi bi-triangle"></i> APEX</button>
+            <button onclick="switchGame('lol')" class="game-tab px-5 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-teal dark:hover:text-tealDark transition-all border border-transparent" data-game="lol"><i class="bi bi-trophy"></i> 英雄联盟</button>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 glass rounded-3xl p-6 md:p-8 bento-card relative overflow-hidden flex flex-col">
+                <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none"><i class="bi bi-trophy-fill text-9xl text-teal dark:text-tealDark"></i></div>
+                <div class="flex justify-between items-center mb-6 relative z-10">
+                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <span id="rank-title">VALORANT</span><span class="text-xs bg-teal/10 text-teal dark:text-tealDark px-2 py-1 rounded">S7 赛季</span>
+                    </h3>
+                    <span class="text-xs font-mono text-gray-400">SYNC: 10m ago</span>
+                </div>
+                <div class="overflow-x-auto flex-1">
+                    <table class="w-full text-left border-collapse min-w-[500px]">
+                        <thead><tr class="text-gray-400 border-b border-gray-200 dark:border-white/5 text-sm font-mono"><th class="pb-4 pl-2">#</th><th class="pb-4">MEMBER</th><th class="pb-4">RANK / SCORE</th><th class="pb-4 hidden md:table-cell">LAST UPDATE</th></tr></thead>
+                        <tbody id="rank-table-body" class="text-gray-700 dark:text-gray-300"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="flex flex-col gap-6">
+                <div class="glass rounded-3xl p-6 bento-card flex flex-col items-center text-center relative overflow-hidden group">
+                    <div class="absolute inset-0 bg-gradient-to-br from-teal/10 to-transparent opacity-0 group-hover:opacity-100 transition duration-500"></div>
+                    <div class="text-xs font-bold text-teal dark:text-tealDark tracking-widest mb-4 z-10">MONTHLY MVP</div>
+                    <div class="w-24 h-24 rounded-full p-1 bg-gradient-to-r from-teal to-blue-500 mb-3 z-10">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" class="w-full h-full rounded-full bg-gray-900" alt="MVP">
+                    </div>
+                    <h4 class="text-xl font-bold text-gray-900 dark:text-white z-10">Felix_Dev</h4>
+                    <p class="text-sm text-gray-500 z-10 mb-4">无畏契约 · 赋能战魂</p>
+                    <div class="flex gap-2 text-xs font-mono text-gray-400 z-10">
+                        <span class="bg-black/10 dark:bg-white/10 px-2 py-1 rounded">KDA 1.8</span>
+                        <span class="bg-black/10 dark:bg-white/10 px-2 py-1 rounded">HS 28%</span>
+                    </div>
+                </div>
+                <div class="glass rounded-3xl p-6 bento-card flex-1">
+                    <h4 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><i class="bi bi-calendar-event text-teal dark:text-tealDark"></i> 近期内战</h4>
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
+                            <div class="text-center w-12"><div class="text-xs text-red-500 font-bold">FEB</div><div class="text-lg font-bold text-gray-800 dark:text-white">24</div></div>
+                            <div><div class="text-sm font-bold text-gray-800 dark:text-gray-200">瓦罗兰特 5v5 训练赛</div><div class="text-xs text-gray-500">20:00 @ 语音频道 1</div></div>
+                        </div>
+                        <div class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 opacity-60">
+                            <div class="text-center w-12"><div class="text-xs text-gray-500 font-bold">MAR</div><div class="text-lg font-bold text-gray-800 dark:text-white">02</div></div>
+                            <div><div class="text-sm font-bold text-gray-800 dark:text-gray-200">永劫无间 三排赛</div><div class="text-xs text-gray-500">待定 @ 线下网咖</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 底部输入栏 -->
+<div id="bottom-bar" class="fixed bottom-8 left-0 w-full px-4 z-[55] transition-all duration-300 pointer-events-none">
+    <div class="max-w-3xl mx-auto mb-3 flex gap-2 overflow-x-auto no-scrollbar justify-center md:justify-start pb-1 pointer-events-auto">
+        <button onclick="fillInput('介绍一下社团历史')" class="glass px-3 py-1.5 rounded-full text-xs font-medium text-gray-600 dark:text-gray-300 hover:text-teal dark:hover:text-tealDark border border-gray-200/50 dark:border-white/10 transition whitespace-nowrap backdrop-blur-md bg-white/40 dark:bg-black/40 cursor-pointer">📜 社团历史</button>
+        <button onclick="fillInput('本学期技术路线图')" class="glass px-3 py-1.5 rounded-full text-xs font-medium text-gray-600 dark:text-gray-300 hover:text-teal dark:hover:text-tealDark border border-gray-200/50 dark:border-white/10 transition whitespace-nowrap backdrop-blur-md bg-white/40 dark:bg-black/40 cursor-pointer">🗺️ 学习路线</button>
+        <button onclick="fillInput('常用开发软件下载')" class="glass px-3 py-1.5 rounded-full text-xs font-medium text-gray-600 dark:text-gray-300 hover:text-teal dark:hover:text-tealDark border border-gray-200/50 dark:border-white/10 transition whitespace-nowrap backdrop-blur-md bg-white/40 dark:bg-black/40 cursor-pointer">💾 软件下载</button>
+        <button onclick="fillInput('如何加入社团')" class="glass px-3 py-1.5 rounded-full text-xs font-medium text-gray-600 dark:text-gray-300 hover:text-teal dark:hover:text-tealDark border border-gray-200/50 dark:border-white/10 transition whitespace-nowrap backdrop-blur-md bg-white/40 dark:bg-black/40 cursor-pointer">👋 加入我们</button>
+    </div>
+    <div class="max-w-3xl mx-auto relative group pointer-events-auto">
+        <div class="absolute -inset-1 bg-gradient-to-r from-teal to-blue-600 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-500"></div>
+        <div class="relative glass rounded-2xl flex items-center p-2 shadow-2xl" style="background:var(--input-bg)">
+            <div class="pl-4 pr-3 text-teal dark:text-tealDark"><i class="bi bi-stars animate-pulse"></i></div>
+            <input type="text" id="ai-input" class="flex-1 bg-transparent border-none focus:ring-0 h-12 text-lg font-light outline-none" style="color:var(--input-text)" placeholder="向 AI 提问..." autocomplete="off">
+            <button id="send-btn" class="w-12 h-12 bg-gray-900 dark:bg-gray-800 hover:bg-teal dark:hover:bg-tealDark hover:text-black text-white rounded-xl transition flex items-center justify-center cursor-pointer"><i class="bi bi-arrow-up text-xl"></i></button>
+        </div>
+    </div>
+</div>
+
+<!-- 弹窗：上传战绩 -->
+<div id="ocr-modal" class="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="glass w-full max-w-lg rounded-3xl p-8 relative" id="ocr-modal-content">
+        <button onclick="closeUploadModal()" class="absolute top-6 right-6 text-gray-500 hover:text-white transition"><i class="bi bi-x-lg text-xl"></i></button>
+        <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">上传战绩截图</h3>
+        <div class="space-y-4">
+            <div><label class="block text-sm font-medium text-gray-500 mb-2">游戏 ID</label>
+                <input type="text" id="upload-id" class="w-full bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-teal transition" placeholder="例如: Player#1234"></div>
+            <div class="border-2 border-dashed border-gray-300 dark:border-white/20 rounded-2xl p-8 text-center hover:border-teal transition cursor-pointer group" onclick="document.getElementById('file-upload').click()">
+                <input type="file" id="file-upload" hidden accept="image/*" onchange="handleFileSelect(this)">
+                <div id="upload-placeholder"><i class="bi bi-image text-4xl text-gray-400 group-hover:text-teal mb-3 block transition"></i><p class="text-sm text-gray-500">点击上传截图，AI 自动识别段位</p></div>
+                <img id="upload-preview" class="hidden w-full rounded-lg shadow-lg" />
+            </div>
+            <div id="ocr-loading" class="hidden text-center py-2"><i class="bi bi-cpu text-teal animate-spin mr-2"></i><span class="text-sm text-gray-500 animate-pulse">正在分析像素点...</span></div>
+            <div id="ocr-result" class="hidden"><label class="block text-sm font-medium text-teal dark:text-tealDark mb-2">识别成功</label>
+                <input type="text" id="result-rank" class="w-full bg-teal/5 border border-teal/20 rounded-xl px-4 py-3 text-teal dark:text-tealDark font-bold text-center"></div>
+            <button id="confirm-upload-btn" onclick="submitRank()" class="w-full bg-gray-200 dark:bg-white/10 text-gray-400 font-bold py-3 rounded-xl cursor-not-allowed transition mt-4" disabled>确认更新</button>
+        </div>
+    </div>
+</div>
+
+<!-- 弹窗：活动报名 -->
+<div id="register-modal" class="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="glass w-full max-w-md rounded-3xl p-8 relative">
+        <button onclick="closeRegisterModal()" class="absolute top-6 right-6 text-gray-500 hover:text-white transition"><i class="bi bi-x-lg text-xl"></i></button>
+        <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">活动报名</h3>
+        <p id="modal-activity-name" class="text-teal dark:text-tealDark font-mono text-sm mb-6"></p>
+        <div class="space-y-4">
+            <div><label class="block text-sm font-medium text-gray-500 mb-2">姓名</label>
+                <input type="text" id="reg-name" class="w-full bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-teal transition" placeholder="请输入真实姓名"></div>
+            <div><label class="block text-sm font-medium text-gray-500 mb-2">学号</label>
+                <input type="text" id="reg-studentid" class="w-full bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-teal transition" placeholder="请输入学号"></div>
+            <div><label class="block text-sm font-medium text-gray-500 mb-2">联系方式</label>
+                <input type="text" id="reg-contact" class="w-full bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-teal transition" placeholder="手机号或微信"></div>
+            <div id="reg-message" class="text-sm text-center hidden"></div>
+            <button onclick="submitRegister()" class="w-full bg-teal dark:bg-tealDark text-white dark:text-black font-bold py-3 rounded-xl hover:opacity-90 transition mt-2">确认报名</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // 1. Canvas 粒子背景
+    // ==========================================
+    const canvas = document.getElementById('geo-canvas');
+    const ctx = canvas.getContext('2d');
+    let width, height, particles = [], isAttracting = true;
+    let particleConfig = { color:'rgba(102,252,241,1)', lineColor:'102,252,241' };
+
+    function updateCanvasColors() {
+        const isDark = document.documentElement.classList.contains('dark');
+        particleConfig.color = isDark ? 'rgba(102,252,241,1)' : 'rgba(55,65,81,0.8)';
+        particleConfig.lineColor = isDark ? '102,252,241' : '55,65,81';
+    }
+
+    function toggleInteraction() {
+        isAttracting = !isAttracting;
+        document.getElementById('interaction-icon').className = isAttracting ? 'bi bi-magnet-fill' : 'bi bi-arrows-angle-expand';
+    }
+
+    const mouse = { x:null, y:null, radius:150 };
+
+    function resize() {
+        width = window.innerWidth; height = window.innerHeight;
+        canvas.width = width; canvas.height = height;
+        initParticles();
+    }
+
+    class Particle {
+        constructor() {
+            this.x = Math.random()*width; this.y = Math.random()*height;
+            this.vx = (Math.random()-.5)*.2; this.vy = (Math.random()-.5)*.2;
+            this.size = Math.random()*2+1;
+        }
+        update() {
+            this.x += this.vx; this.y += this.vy;
+            if (this.x<0||this.x>width) this.vx*=-1;
+            if (this.y<0||this.y>height) this.vy*=-1;
+            if (mouse.x!=null) {
+                let dx=mouse.x-this.x, dy=mouse.y-this.y;
+                let dist=Math.sqrt(dx*dx+dy*dy);
+                if (dist<mouse.radius) {
+                    const fx=dx/dist, fy=dy/dist;
+                    const force=(mouse.radius-dist)/mouse.radius;
+                    if (isAttracting) { this.x+=fx*force*2; this.y+=fy*force*2; }
+                    else { this.x-=fx*force*2; this.y-=fy*force*2; }
+                }
+            }
+        }
+        draw() {
+            ctx.beginPath(); ctx.arc(this.x,this.y,this.size,0,Math.PI*2);
+            ctx.fillStyle=particleConfig.color; ctx.fill();
+        }
+    }
+
+    function initParticles() {
+        particles=[];
+        let num=(width*height)/20000;
+        for (let i=0;i<num;i++) particles.push(new Particle());
+    }
+
+    function connect() {
+        const maxD=120, maxD2=maxD*maxD;
+        for (let a=0;a<particles.length;a++) {
+            for (let b=a+1;b<particles.length;b++) {
+                let dx=particles[a].x-particles[b].x, dy=particles[a].y-particles[b].y;
+                let d2=dx*dx+dy*dy;
+                if (d2<maxD2) {
+                    let op=1-d2/maxD2;
+                    ctx.strokeStyle=`rgba(${particleConfig.lineColor},${op*.5})`;
+                    ctx.lineWidth=1; ctx.beginPath();
+                    ctx.moveTo(particles[a].x,particles[a].y);
+                    ctx.lineTo(particles[b].x,particles[b].y); ctx.stroke();
+                }
+            }
+        }
+    }
+
+    function animate() {
+        requestAnimationFrame(animate); ctx.clearRect(0,0,width,height);
+        particles.forEach(p=>{p.update();p.draw();}); connect();
+    }
+
+    window.addEventListener('mousemove',(e)=>{mouse.x=e.clientX;mouse.y=e.clientY;});
+    window.addEventListener('mouseout',()=>{mouse.x=undefined;mouse.y=undefined;});
+    window.addEventListener('resize',resize);
+
+    // ==========================================
+    // 2. 视图切换
+    // ==========================================
+    const views = {
+        home: document.getElementById('home-view'),
+        chat: document.getElementById('chat-view'),
+        esports: document.getElementById('esports-view')
+    };
+
+    window.switchView = function(target) {
+        Object.values(views).forEach(el=>{el.classList.remove('view-visible');el.classList.add('view-hidden');});
+        views[target].classList.remove('view-hidden'); views[target].classList.add('view-visible');
+        if (target==='chat') setTimeout(()=>document.getElementById('ai-input').focus(),100);
+    };
+
+    window.toggleTheme = function() {
+        document.documentElement.classList.toggle('dark');
+        localStorage.setItem('theme', document.documentElement.classList.contains('dark')?'dark':'light');
+        updateCanvasColors();
+    };
+
+    document.addEventListener('keydown',(e)=>{
+        if (e.key==='Escape') {
+            const ocrModal=document.getElementById('ocr-modal');
+            const regModal=document.getElementById('register-modal');
+            if (ocrModal&&!ocrModal.classList.contains('hidden')) { closeUploadModal(); return; }
+            if (regModal&&!regModal.classList.contains('hidden')) { closeRegisterModal(); return; }
+            if (!views.home.classList.contains('view-visible')) switchView('home');
+        }
+    });
+
+    // ==========================================
+    // 3. AI 聊天
+    // ==========================================
+    const input = document.getElementById('ai-input');
+    const sendBtn = document.getElementById('send-btn');
+    const chatLog = document.getElementById('conversation-log');
+
+    window.fillInput = (text)=>{input.value=text;handleSend();};
+
+    async function handleSend() {
+        const text = input.value.trim();
+        if (!text) return;
+        if (!views.chat.classList.contains('view-visible')) switchView('chat');
+        addMessage('user', text);
+        input.value = '';
+        scrollToBottom();
+
+        // 创建 AI 气泡（先空着，流式填入）
+        const bubble = createAiBubble();
+
+        try {
+            const res = await fetch('http://localhost:8080/api/ai/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text })
+            });
+
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let fullText = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop(); // 保留不完整的行
+
+                for (const line of lines) {
+                    if (line.startsWith('data:')) {
+                        const data = line.slice(5).trim();
+                        if (data === '[DONE]') break;
+                        fullText += data;
+                        // 实时渲染 Markdown
+                        bubble.innerHTML = marked.parse(fullText);
+                        scrollToBottom();
+                    }
+                }
+            }
+        } catch (err) {
+            bubble.innerHTML = '无法连接后端，请检查服务是否启动。';
+        }
+
+        scrollToBottom();
+    }
+
+    // 创建空的 AI 气泡并挂载到 DOM
+    function createAiBubble() {
+        const div = document.createElement('div');
+        div.className = 'flex justify-start chat-fade-enter';
+        const bubble = document.createElement('div');
+        bubble.className = 'glass text-gray-800 dark:text-gray-200 px-5 py-3 rounded-2xl rounded-tl-sm border border-gray-200 dark:border-white/10 max-w-[85%] shadow-lg prose prose-sm dark:prose-invert max-w-none';
+        bubble.innerHTML = '<span class="animate-pulse text-teal dark:text-tealDark">▋</span>';
+        div.appendChild(bubble);
+        chatLog.appendChild(div);
+        scrollToBottom();
+        return bubble;
+    }
+
+    sendBtn.onclick=handleSend;
+    input.onkeypress=(e)=>{if(e.key==='Enter')handleSend();};
+
+    function scrollToBottom(){const c=document.getElementById('scroll-container');c.scrollTo({top:c.scrollHeight,behavior:'smooth'});}
+
+    function addMessage(role, content) {
+        const div = document.createElement('div');
+        div.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'} chat-fade-enter`;
+        const bubble = document.createElement('div');
+        if (role === 'user') {
+            bubble.className = 'bg-teal dark:bg-tealDark text-white dark:text-black px-5 py-3 rounded-2xl rounded-tr-sm max-w-[85%] shadow-lg';
+            bubble.innerHTML = content;
+        } else {
+            bubble.className = 'glass text-gray-800 dark:text-gray-200 px-5 py-3 rounded-2xl rounded-tl-sm border border-gray-200 dark:border-white/10 max-w-[85%] shadow-lg prose prose-sm dark:prose-invert max-w-none';
+            bubble.innerHTML = marked.parse(content);
+        }
+        div.appendChild(bubble);
+        chatLog.appendChild(div);
+    }
+
+    function addLoading() {
+        const div=document.createElement('div'); div.id='ai-loading';
+        div.className='flex justify-start chat-fade-enter';
+        div.innerHTML=`<div class="glass px-4 py-3 rounded-2xl rounded-tl-sm border border-gray-200 dark:border-white/10 flex gap-2 items-center"><span class="w-2 h-2 bg-teal dark:bg-tealDark rounded-full animate-bounce"></span><span class="w-2 h-2 bg-teal dark:bg-tealDark rounded-full animate-bounce delay-75"></span></div>`;
+        chatLog.appendChild(div);
+    }
+    function removeLoading(){const el=document.getElementById('ai-loading');if(el)el.remove();}
+
+
+    // function getMockReply(text) {
+    //     if(text.includes('历史')) return 'ITSTUDIO 成立于 2018 年，现已发展为校级五星社团。';
+    //     if(text.includes('路线')) return '本学期：前端(React/Vue) / 后端(Go/Java) / AI(PyTorch)';
+    //     if(text.includes('加入')) return '招新通常在每学期开学第一周进行，请留意公告。';
+    //     return '收到！请尝试点击下方快捷指令或访问社团电竞模块查看最新战绩。';
+    // }
+
+    // ==========================================
+    // 4. 历届成员（对接后端数据库）
+    // ==========================================
+    // async function loadAlumniMembers() {
+    //     const c1 = document.getElementById('member-content-1');
+    //     const c2 = document.getElementById('member-content-2');
+    //
+    //     try {
+    //         // 修改点：这里的 URL 对应你 Controller 里的 @GetMapping("/members/alumni")
+    //         // 如果你想显示所有成员，可以改成 http://localhost:8080/api/members
+    //         const res = await fetch('http://localhost:8080/api/members/alumni');
+    //         const result = await res.json();
+    //
+    //         // 这里的 result.success 和 result.data 对应你后端 ApiResponse 的结构
+    //         if (result.success && result.data && result.data.length > 0) {
+    //             renderMemberMarquee(result.data);
+    //         } else {
+    //             console.warn("后端返回数据为空，启用默认显示");
+    //             showDefaultMembers();
+    //         }
+    //     } catch (err) {
+    //         console.error("无法连接到后端服务:", err);
+    //         showDefaultMembers(); // 如果后端没启动，依然显示默认值防止页面空白
+    //     }
+    // }
+
+    async function loadAlumniMembers() {
+        const c1 = document.getElementById('member-content-1');
+        const c2 = document.getElementById('member-content-2');
+
+        try {
+            // 请求历届成员接口
+            const res = await fetch('http://localhost:8080/api/members/alumni');
+            const result = await res.json();
+
+            if (result.success && result.data && result.data.length > 0) {
+                const memberList = result.data;
+                const html = memberList.map(m => `
+                <div class="member-card glass rounded-2xl p-6 flex items-center gap-4 border border-white/10 shadow-xl">
+                    <div class="w-14 h-14 rounded-full bg-gradient-to-br from-teal to-blue-500 p-0.5 flex-shrink-0">
+                        <!-- 优先使用数据库存的 avatar 种子，如果没有则用姓名 -->
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(m.avatar || m.name)}"
+                             class="w-full h-full rounded-full bg-gray-900" alt="avatar">
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-gray-900 dark:text-white">${m.name}</h4>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-teal dark:text-tealDark font-mono font-bold">${m.role}</span>
+                            <span class="text-[10px] text-gray-500">${m.grade}</span>
+                        </div>
+                        <p class="text-[10px] text-gray-400 mt-1 italic">${m.department || ''}</p>
+                        ${m.skills ? `
+                            <div class="flex flex-wrap gap-1 mt-2">
+                                ${m.skills.split(',').map(s => `
+                                    <span class="text-[9px] bg-teal/5 text-teal/80 dark:text-tealDark/80 border border-teal/10 px-1.5 py-0.5 rounded">
+                                        ${s.trim()}
+                                    </span>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>`).join('');
+
+                c1.innerHTML = html;
+                c2.innerHTML = html;
+            } else {
+                showDefaultMembers();
+            }
+        } catch (err) {
+            console.error("后端对接失败:", err);
+            showDefaultMembers();
+        }
+    }
+
+    // 提取渲染逻辑
+    function renderMemberMarquee(memberList) {
+        const c1 = document.getElementById('member-content-1');
+        const c2 = document.getElementById('member-content-2');
+
+        const html = memberList.map(m => `
+        <div class="member-card glass rounded-2xl p-6 flex items-center gap-4 border border-white/10 shadow-xl">
+            <div class="w-14 h-14 rounded-full bg-gradient-to-br from-teal to-blue-500 p-0.5 flex-shrink-0">
+                <!-- 使用后端返回的名字作为头像种子 -->
+                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(m.name)}" class="w-full h-full rounded-full bg-gray-900" alt="avatar">
+            </div>
+            <div>
+                <h4 class="font-bold text-gray-900 dark:text-white">${m.name}</h4>
+                <!-- 对应你数据库中的 role 字段 -->
+                <p class="text-xs text-teal dark:text-tealDark font-mono tracking-wider">${m.role || '核心成员'}</p>
+                <!-- 对应你数据库中的 grade 字段 -->
+                <p class="text-[10px] text-gray-500 mt-1">${m.grade || ''}</p>
+                <!-- 对应你数据库中的 skills 字段（假设是逗号分隔的字符串） -->
+                ${m.skills ? `
+                    <div class="flex flex-wrap gap-1 mt-2">
+                        ${m.skills.split(',').map(s => `
+                            <span class="text-[9px] bg-teal/10 text-teal dark:text-tealDark px-1.5 py-0.5 rounded">${s.trim()}</span>
+                        `).join('')}
+                    </div>
+                ` : ''}
+            </div>
+        </div>`).join('');
+
+        c1.innerHTML = html;
+        c2.innerHTML = html; // 复制一份用于实现无缝滚动
+    }
+
+    // ==========================================
+    // 5. 活动报名（对接后端）
+    // ==========================================
+    let currentActivityId=null;
+
+    async function loadActivities() {
+        try {
+            const res=await fetch('http://localhost:8080/api/activities');
+            const result=await res.json();
+            if (result.success&&result.data.length>0) {
+                const latest=result.data[0];
+                currentActivityId=latest.id;
+                document.getElementById('activity-name').textContent=latest.name;
+                if (latest.description) document.getElementById('activity-desc').textContent=latest.description;
+                document.getElementById('modal-activity-name').textContent='📌 '+latest.name;
+            }
+        } catch(err) { document.getElementById('activity-name').textContent='2026 蓝桥杯'; }
+    }
+
+    window.openRegisterModal=function(){
+        document.getElementById('register-modal').classList.remove('hidden');
+        document.getElementById('reg-message').classList.add('hidden');
+    };
+    window.closeRegisterModal=function(){
+        document.getElementById('register-modal').classList.add('hidden');
+        document.getElementById('reg-name').value='';
+        document.getElementById('reg-studentid').value='';
+        document.getElementById('reg-contact').value='';
+    };
+    window.submitRegister=async function(){
+        const name=document.getElementById('reg-name').value.trim();
+        const studentId=document.getElementById('reg-studentid').value.trim();
+        const contact=document.getElementById('reg-contact').value.trim();
+        const msgEl=document.getElementById('reg-message');
+        if (!name||!studentId||!contact) {
+            msgEl.textContent='⚠️ 请填写所有信息';
+            msgEl.className='text-sm text-center text-yellow-500';
+            msgEl.classList.remove('hidden'); return;
+        }
+        try {
+            const res=await fetch('http://localhost:8080/api/register',{
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({activityId:currentActivityId,studentName:name,studentId,contact})
+            });
+            const result=await res.json();
+            msgEl.classList.remove('hidden');
+            if (result.success) {
+                msgEl.textContent='✅ '+result.message;
+                msgEl.className='text-sm text-center text-teal dark:text-tealDark';
+                setTimeout(()=>closeRegisterModal(),2000);
+            } else {
+                msgEl.textContent='❌ '+result.message;
+                msgEl.className='text-sm text-center text-red-400';
+            }
+        } catch(err) {
+            msgEl.textContent='❌ 网络错误，请检查后端是否启动';
+            msgEl.className='text-sm text-center text-red-400';
+            msgEl.classList.remove('hidden');
+        }
+    };
+
+    // ==========================================
+    // 6. 电竞模块（对接后端）
+    // ==========================================
+    let currentActiveGame = 'valorant';
+
+    async function loadRankData(game) {
+        const tbody = document.getElementById('rank-table-body');
+        tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-gray-400 font-mono animate-pulse">Loading...</td></tr>`;
+        try {
+            const res = await fetch(`http://localhost:8080/api/rank/${game}`);
+            const result = await res.json();
+            tbody.innerHTML = '';
+            if (!result.success || result.data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-gray-500">暂无数据</td></tr>`;
+                return;
+            }
+            result.data.forEach((p, i) => {
+                let rc = 'text-gray-500', ri = '';
+                if (i === 0) { rc = 'text-yellow-500'; ri = "<i class='bi bi-trophy-fill'></i>"; }
+                if (i === 1) rc = 'text-gray-400';
+                if (i === 2) rc = 'text-orange-700';
+                // 计算距离更新时间
+                const updated = p.updatedAt ? new Date(p.updatedAt) : null;
+                const timeStr = updated ? timeSince(updated) : '-';
+                tbody.innerHTML += `
+                <tr class="border-b border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition">
+                    <td class="py-4 pl-2 font-bold font-mono ${rc}">${ri} #${i+1}</td>
+                    <td class="py-4">
+                        <div class="flex items-center gap-3">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${p.avatarSeed||p.playerName}" class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700">
+                            <span class="font-bold text-gray-800 dark:text-gray-200">${p.playerName}</span>
+                        </div>
+                    </td>
+                    <td class="py-4">
+                        <span class="bg-teal/10 dark:bg-tealDark/10 text-teal dark:text-tealDark px-2 py-1 rounded text-xs font-bold border border-teal/20">${p.rankName}</span>
+                        <span class="text-xs text-gray-400 ml-1">${p.score}</span>
+                    </td>
+                    <td class="py-4 hidden md:table-cell text-xs font-mono text-gray-400">${timeStr}</td>
+                </tr>`;
+            });
+        } catch (err) {
+            tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-red-400 text-sm">无法连接后端，请检查服务是否启动</td></tr>`;
+        }
+    }
+
+    // 计算"多久前"的辅助函数
+    function timeSince(date) {
+        const seconds = Math.floor((new Date() - date) / 1000);
+        if (seconds < 60) return 'just now';
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes}m ago`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours}h ago`;
+        return `${Math.floor(hours / 24)}d ago`;
+    }
+
+    window.switchGame = function(game) {
+        currentActiveGame = game;
+        document.querySelectorAll('.game-tab').forEach(btn => {
+            btn.className = btn.dataset.game === game
+                ? 'game-tab active-tab px-5 py-2 rounded-lg text-sm font-bold transition-all border border-transparent'
+                : 'game-tab px-5 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-teal dark:hover:text-tealDark transition-all border border-transparent';
+        });
+        const titles = { valorant:'VALORANT', naraka:'NARAKA', apex:'APEX', lol:'LEAGUE' };
+        document.getElementById('rank-title').innerText = titles[game] || game.toUpperCase();
+        loadRankData(game);
+    };
+
+    // ==========================================
+    // 7. 上传战绩弹窗
+    // ==========================================
+    const modal=document.getElementById('ocr-modal');
+    const modalContent=document.getElementById('ocr-modal-content');
+    const confirmBtn=document.getElementById('confirm-upload-btn');
+
+    window.openUploadModal=function(){
+        modal.classList.remove('hidden');
+        modalContent.classList.add('modal-animate-in'); modalContent.classList.remove('modal-animate-out');
+        document.getElementById('upload-placeholder').classList.remove('hidden');
+        document.getElementById('upload-preview').classList.add('hidden');
+        document.getElementById('ocr-loading').classList.add('hidden');
+        document.getElementById('ocr-result').classList.add('hidden');
+        confirmBtn.disabled=true;
+        confirmBtn.className='w-full bg-gray-200 dark:bg-white/10 text-gray-400 font-bold py-3 rounded-xl cursor-not-allowed transition mt-4';
+    };
+    window.closeUploadModal=function(){
+        modalContent.classList.remove('modal-animate-in'); modalContent.classList.add('modal-animate-out');
+        setTimeout(()=>modal.classList.add('hidden'),250);
+    };
+    window.handleFileSelect=function(inp){
+        if(inp.files&&inp.files[0]){
+            const reader=new FileReader();
+            reader.onload=function(e){
+                document.getElementById('upload-placeholder').classList.add('hidden');
+                const img=document.getElementById('upload-preview');
+                img.src=e.target.result; img.classList.remove('hidden');
+                document.getElementById('ocr-loading').classList.remove('hidden');
+                setTimeout(()=>{
+                    document.getElementById('ocr-loading').classList.add('hidden');
+                    document.getElementById('ocr-result').classList.remove('hidden');
+                    document.getElementById('result-rank').value='超凡入圣 2 (88RR)';
+                    confirmBtn.disabled=false;
+                    confirmBtn.className='w-full bg-teal dark:bg-tealDark text-white dark:text-black font-bold py-3 rounded-xl hover:opacity-90 transition mt-4';
+                },1500);
+            };
+            reader.readAsDataURL(inp.files[0]);
+        }
+    };
+
+    window.submitRank = async function() {
+        const playerName = document.getElementById('upload-id').value.trim();
+        const rankFull = document.getElementById('result-rank').value.trim();
+        if (!playerName) { alert('请填写游戏 ID'); return; }
+
+        let rankName = rankFull, score = '';
+        if (rankFull.includes('(')) {
+            rankName = rankFull.split('(')[0].trim();
+            score = rankFull.split('(')[1].replace(')', '').trim();
+        }
+
+        const btn = document.getElementById('confirm-upload-btn');
+        btn.textContent = '提交中...';
+        btn.disabled = true;
+
+        try {
+            const res = await fetch('http://localhost:8080/api/rank/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    game: currentActiveGame,
+                    playerName, rankName, score,
+                    avatarSeed: playerName
+                })
+            });
+            const result = await res.json();
+            if (result.success) {
+                closeUploadModal();
+                await loadRankData(currentActiveGame);
+            } else {
+                alert('更新失败：' + result.message);
+                btn.textContent = '确认更新';
+                btn.disabled = false;
+            }
+        } catch (err) {
+            alert('网络错误，请检查后端是否启动');
+            btn.textContent = '确认更新';
+            btn.disabled = false;
+        }
+    };
+
+    // ==========================================
+    // 8. 启动
+    // ==========================================
+    ;(function init(){
+        const savedTheme=localStorage.getItem('theme');
+        const sysPrefersDark=window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (savedTheme==='dark'||(!savedTheme&&sysPrefersDark)) document.documentElement.classList.add('dark');
+        else document.documentElement.classList.remove('dark');
+        updateCanvasColors();
+        resize();
+        animate();
+        switchGame('valorant');
+        loadActivities();
+        loadAlumniMembers();
+    })();
+</script>
+</body>
+</html>
